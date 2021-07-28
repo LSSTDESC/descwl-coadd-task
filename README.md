@@ -1,2 +1,2 @@
 # descwl-coadd-task
-DM Task to run coaddition
+Task to run coaddition in cells
