@@ -18,7 +18,7 @@ BANDS = ['g', 'r', 'i', 'z']
 # TODO make run on single band
 class CoaddInCellsConnections(
     pipeBase.PipelineTaskConnections,
-    dimensions=("tract", "patch", "skymap"),
+    dimensions=("tract", "patch", "band", "skymap"),
     # running all bands
     # not having instrument makes it possible to
     # combine
@@ -79,7 +79,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
     # @pipeBase.timeMethod
     def run(self,
             calExpList: typing.List[lsst.afw.image.ExposureF],
-            skyInfo: pipeBase.Struct) -> pipeBase.Struct:
+            skyInfo: pipeBase.Struct, bands) -> pipeBase.Struct:
         # import pdb
 
         self.log.info('seed: %d' % self.config.seed)
@@ -118,6 +118,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             explist=calExpList,
             skyInfo=skyInfo,
             rng=rng,
+            bands=bands,
             num_to_keep=3,
         )
 
@@ -163,13 +164,13 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
         )
 
         # Run the warp and coaddition code
-        outputs = self.run(inputs["calExpList"], skyInfo=skyInfo)
+        outputs = self.run(inputs["calExpList"], skyInfo=skyInfo, bands=quantumDataId["band"])
 
         # Persist the results via the butler
         butlerQC.put(outputs.coadd, outputRefs.coadd)
 
 
-def make_inputs(explist, skyInfo, rng, num_to_keep=None):
+def make_inputs(explist, skyInfo, rng, bands=BANDS, num_to_keep=None):
     """
     make inputs for the coadding code
 
@@ -181,6 +182,8 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
         The skyInfo dict, must have .wcs and .bbox
     rng: np.random.RandomState
         Random number generator for noise image generation
+    bands: list of str
+        List of bands to coadd
     num_to_keep: int, optional
         Optionally keep this many exposures
 
@@ -194,7 +197,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     """
 
     band_data = {}
-    for band in BANDS:
+    for band in bands:
         blist = []
         for exp in explist:
             tband = exp.dataId['band']
