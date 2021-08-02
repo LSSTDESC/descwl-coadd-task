@@ -12,14 +12,10 @@ import lsst.geom as geom
 from lsst.pex.config import Field
 from descwl_coadd.coadd import MultiBandCoaddsDM
 
-BANDS = ['g', 'r', 'i', 'z']
 
-
-# TODO make run on single band
 class CoaddInCellsConnections(
     pipeBase.PipelineTaskConnections,
     dimensions=("tract", "patch", "band", "skymap"),
-    # running all bands
     # not having instrument makes it possible to
     # combine
     # calexp
@@ -60,12 +56,15 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
     """
     seed = Field(
         dtype=int,
-        # default=0,
+        default=0,
         optional=False,
         doc='seed for the random number generator',
     )
-
-    # pass
+    interp_bright = Field(
+        dtype=bool,
+        default=True,
+        doc="Interpolate bright stars?"
+    )
 
 
 class CoaddInCellsTask(pipeBase.PipelineTask):
@@ -74,12 +73,12 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
     """
 
     ConfigClass = CoaddInCellsConfig
-    _DefaultName = "coadd"
+    _DefaultName = "coaddsInCellsV1"
 
     # @pipeBase.timeMethod
     def run(self,
             calExpList: typing.List[lsst.afw.image.ExposureF],
-            skyInfo: pipeBase.Struct, bands) -> pipeBase.Struct:
+            skyInfo: pipeBase.Struct) -> pipeBase.Struct:
         # import pdb
 
         self.log.info('seed: %d' % self.config.seed)
@@ -118,13 +117,12 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             explist=calExpList,
             skyInfo=skyInfo,
             rng=rng,
-            bands=bands,
             num_to_keep=3,
         )
 
         # TODO adapt to new online coadd code
         mbc = MultiBandCoaddsDM(
-            interp_bright=True,  # make configurable
+            interp_bright=self.config.interp_bright,
             data=data['band_data'],
             coadd_wcs=data['coadd_wcs'],
             coadd_bbox=data['coadd_bbox'],
@@ -164,13 +162,13 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
         )
 
         # Run the warp and coaddition code
-        outputs = self.run(inputs["calExpList"], skyInfo=skyInfo, bands=quantumDataId["band"])
+        outputs = self.run(inputs["calExpList"], skyInfo=skyInfo)
 
         # Persist the results via the butler
         butlerQC.put(outputs.coadd, outputRefs.coadd)
 
 
-def make_inputs(explist, skyInfo, rng, bands=BANDS, num_to_keep=None):
+def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     """
     make inputs for the coadding code
 
@@ -182,59 +180,46 @@ def make_inputs(explist, skyInfo, rng, bands=BANDS, num_to_keep=None):
         The skyInfo dict, must have .wcs and .bbox
     rng: np.random.RandomState
         Random number generator for noise image generation
-    bands: list of str
-        List of bands to coadd
     num_to_keep: int, optional
         Optionally keep this many exposures
 
     Returns
     -------
     dict with keys
-        'band_data': dict keyed by band
         'coadd_wcs': DM wcs object
         'coadd_bbox': DM bbox object
         'psf_dims': dimensions of psf
     """
 
-    band_data = {}
-    for band in bands:
-        blist = []
-        for exp in explist:
-            tband = exp.dataId['band']
-            if tband == band:
-                blist.append({'exp': exp})
+    blist = []
+    for exp in explist:
+        blist.append({'exp': exp})
 
-        if len(blist) > 0:
-            band_data[band] = blist
-
-    if len(band_data) == 0:
+    if len(blist) == 0:
         raise ValueError('no data found')
 
     if num_to_keep is not None:
-        for band in band_data:
-            # offset for the test dataset in which the early ones are not
-            # overlapping
-            ntot = len(band_data[band])
-            mid = ntot // 2
-            band_data[band] = band_data[band][mid:mid + num_to_keep]
-            # band_data[band] = band_data[band][:num_to_keep]
+        # offset for the test dataset in which the early ones are not
+        # overlapping
+        ntot = len(blist)
+        mid = ntot // 2
+        blist = blist[mid:mid + num_to_keep]
+        # blist = blist[:num_to_keep]
 
     # copy data form disk
-    for band in band_data:
-        for i in range(len(band_data[band])):
-            band_data[band][i]['exp'] = band_data[band][i]['exp'].get()
+    for i in range(len(blist)):
+        blist[i]['exp'] = blist[i]['exp'].get()
 
-            # make noise exp here
-            band_data[band][i]['noise_exp'] = get_noise_exp(
-                exp=band_data[band][i]['exp'],
-                rng=rng,
-            )
+        # make noise exp here
+        blist[i]['noise_exp'] = get_noise_exp(
+            exp=blist[i]['exp'],
+            rng=rng,
+        )
 
     # TODO set BRIGHT bit here for bright stars
 
     # base psf size on last exp
-    band = list(band_data.keys())[0]
-    psf = band_data[band][0]['exp'].getPsf()
+    psf = blist[0]['exp'].getPsf()
     pos = geom.Point2D(x=100, y=100)
     psfim = psf.computeImage(pos)
 
@@ -242,7 +227,6 @@ def make_inputs(explist, skyInfo, rng, bands=BANDS, num_to_keep=None):
     psf_dims = (max(psf_dims), ) * 2
 
     return {
-        'band_data': band_data,
         'coadd_wcs': skyInfo.wcs,
         'coadd_bbox': skyInfo.bbox,
         'psf_dims': psf_dims,
