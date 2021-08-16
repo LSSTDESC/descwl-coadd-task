@@ -195,12 +195,12 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
             'bound %d bands %s, expected one' % (len(bands), bands)
         )
 
+    # TODO Arun add code to remove calexp that have edges
+
     if num_to_keep is not None:
         ntot = len(explist)
-        mid = ntot // 2
+        mid = ntot // 4
         explist = explist[mid:mid + num_to_keep]
-
-    # TODO set BRIGHT bit here for bright stars
 
     # base psf size on last exp
     psf = explist[0].get().getPsf()
