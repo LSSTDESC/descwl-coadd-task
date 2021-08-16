@@ -203,7 +203,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     # TODO set BRIGHT bit here for bright stars
 
     # base psf size on last exp
-    psf = explist[0].getPsf()
+    psf = explist[0].get().getPsf()
     pos = geom.Point2D(x=100, y=100)
     psfim = psf.computeImage(pos)
 
