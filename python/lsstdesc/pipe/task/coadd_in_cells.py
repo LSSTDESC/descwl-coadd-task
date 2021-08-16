@@ -56,7 +56,6 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
     """
     seed = Field(
         dtype=int,
-        default=0,
         optional=False,
         doc='seed for the random number generator',
     )
