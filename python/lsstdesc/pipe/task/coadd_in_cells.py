@@ -10,7 +10,7 @@ from lsst.pipe.tasks.coaddBase import makeSkyInfo
 import lsst.utils
 import lsst.geom as geom
 from lsst.pex.config import Field
-from descwl_coadd.coadd import MultiBandCoaddsDM
+from descwl_coadd import make_coadd_obs
 
 
 class CoaddInCellsConnections(
@@ -67,6 +67,7 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
     )
 
 
+# TODO Require band argument and only a single band
 class CoaddInCellsTask(pipeBase.PipelineTask):
     """
     Perform coaddition
@@ -119,21 +120,15 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             rng=rng,
             num_to_keep=3,
         )
-
-        # TODO adapt to new online coadd code
-        mbc = MultiBandCoaddsDM(
-            interp_bright=self.config.interp_bright,
-            data=data['band_data'],
+        coadd_obs = make_coadd_obs(
+            exps=data['explist'],
             coadd_wcs=data['coadd_wcs'],
             coadd_bbox=data['coadd_bbox'],
             psf_dims=data['psf_dims'],
-            byband=False,
-            # show=send_show,
-            # loglevel=loglevel,
+            rng=rng,
+            remove_poisson=True,  # no object poisson noise in sims
         )
-        coadd_obs = mbc.coadds['all']
 
-        # TODO Make sure this is separately for each band, not for all bands
         # TODO learn how to save the noise exp as well
         return pipeBase.Struct(coadd=coadd_obs.coadd_exp)
 
@@ -186,40 +181,30 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     Returns
     -------
     dict with keys
+        'explist': list of exposures to use
         'coadd_wcs': DM wcs object
         'coadd_bbox': DM bbox object
         'psf_dims': dimensions of psf
     """
 
-    blist = []
+    bands = set()
     for exp in explist:
-        blist.append({'exp': exp})
+        bands.add(exp.dataId['band'])
 
-    if len(blist) == 0:
-        raise ValueError('no data found')
+    if len(bands) > 1:
+        raise ValueError(
+            'bound %d bands %s, expected one' % (len(bands), bands)
+        )
 
     if num_to_keep is not None:
-        # offset for the test dataset in which the early ones are not
-        # overlapping
-        ntot = len(blist)
+        ntot = len(explist)
         mid = ntot // 2
-        blist = blist[mid:mid + num_to_keep]
-        # blist = blist[:num_to_keep]
-
-    # copy data form disk
-    for i in range(len(blist)):
-        blist[i]['exp'] = blist[i]['exp'].get()
-
-        # make noise exp here
-        blist[i]['noise_exp'] = get_noise_exp(
-            exp=blist[i]['exp'],
-            rng=rng,
-        )
+        explist = explist[mid:mid + num_to_keep]
 
     # TODO set BRIGHT bit here for bright stars
 
     # base psf size on last exp
-    psf = blist[0]['exp'].getPsf()
+    psf = explist[0].getPsf()
     pos = geom.Point2D(x=100, y=100)
     psfim = psf.computeImage(pos)
 
@@ -227,6 +212,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     psf_dims = (max(psf_dims), ) * 2
 
     return {
+        'explist': explist,
         'coadd_wcs': skyInfo.wcs,
         'coadd_bbox': skyInfo.bbox,
         'psf_dims': psf_dims,
