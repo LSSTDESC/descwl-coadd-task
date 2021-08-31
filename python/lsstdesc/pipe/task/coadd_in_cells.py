@@ -57,7 +57,7 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
     seed = Field(
         dtype=int,
         optional=False,
-        doc='seed for the random number generator',
+        doc='Base seed for the random number generator',
     )
     interp_bright = Field(
         dtype=bool,
@@ -84,7 +84,8 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
         self.log.info('seed: %d' % self.config.seed)
         self.log.info('num exp: %d' % len(calExpList))
 
-        rng = np.random.RandomState(self.config.seed)
+        hash_key = hash_function(self.config.seed, skyInfo.tract, skyInfo.patch, calExpList[0].dataId['band'])
+        rng = np.random.RandomState(hash_key)
 
         # We need to explicitly get the images since we deferred loading.
         # The line below is just an example illustrating this.
@@ -265,3 +266,12 @@ def get_noise_exp(exp, rng):
     noise_exp.setDetector(exp.getDetector())
 
     return noise_exp
+
+
+def hash_function(seed, tract, patch, band):
+    """Generate a hash key given the base seed and metadata
+    """
+    band_map = {'u': 1, 'g': 2, 'r': 3, 'i': 4, 'z': 5, 'y': 6}
+    # Add a linear combination of metadata weighted by prime numbers
+    hash_key = seed + 131071*tract + 524287*patch + 8388607*band_map[band]
+    return hash_key
