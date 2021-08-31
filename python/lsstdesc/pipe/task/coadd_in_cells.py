@@ -21,10 +21,7 @@ class CoaddInCellsConnections(
     # calexp
 ):
     calExpList = cT.Input(
-        doc=(
-            "Input exposures to be resampled and optionally PSF-matched "
-            "onto a SkyMap projection/patch",
-        ),
+        doc="Input exposures to be resampled and optionally PSF-matched onto a SkyMap projection/patch",
         name="calexp",
         storageClass="ExposureF",
         dimensions=("instrument", "visit", "detector"),
@@ -32,16 +29,13 @@ class CoaddInCellsConnections(
         deferLoad=True,
     )
     skyMap = pipeBase.connectionTypes.Input(
-        doc=(
-            "Input definition of geometry/box and "
-            "projection/wcs for coadded exposures"
-        ),
+        doc="Input definition of geometry/box and projection/wcs for coadded exposures",
         name="skyMap",
         storageClass="SkyMap",
         dimensions=("skymap",),
     )
     coadd = cT.Output(
-        doc=("Coadded image"),
+        doc="Coadded image",
         name="coaddsInCellsV1",
         storageClass="ExposureF",
         dimensions=("tract", "patch", "skymap", "band", "instrument")
@@ -51,13 +45,12 @@ class CoaddInCellsConnections(
 
 class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
                          pipelineConnections=CoaddInCellsConnections):
-    """
-    Configuration parameters for the `CoaddInCellsTask`.
+    """Configuration parameters for the `CoaddInCellsTask`.
     """
     seed = Field(
         dtype=int,
         optional=False,
-        doc='Base seed for the random number generator',
+        doc="Base seed for the random number generator",
     )
     interp_bright = Field(
         dtype=bool,
@@ -68,8 +61,7 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
 
 # TODO Require band argument and only a single band
 class CoaddInCellsTask(pipeBase.PipelineTask):
-    """
-    Perform coaddition
+    """Perform coaddition
     """
 
     ConfigClass = CoaddInCellsConfig
@@ -81,10 +73,10 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             skyInfo: pipeBase.Struct) -> pipeBase.Struct:
         # import pdb
 
-        self.log.info('seed: %d' % self.config.seed)
-        self.log.info('num exp: %d' % len(calExpList))
+        self.log.info("seed: %d", self.config.seed)
+        self.log.info("num exp: %d", len(calExpList))
 
-        hash_key = hash_function(self.config.seed, skyInfo.tract, skyInfo.patch, calExpList[0].dataId['band'])
+        hash_key = hash_function(self.config.seed, skyInfo.tract, skyInfo.patch, calExpList[0].dataId["band"])
         rng = np.random.RandomState(hash_key)
 
         # We need to explicitly get the images since we deferred loading.
@@ -121,10 +113,10 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             num_to_keep=3,
         )
         coadd_obs = make_coadd_obs(
-            exps=data['explist'],
-            coadd_wcs=data['coadd_wcs'],
-            coadd_bbox=data['coadd_bbox'],
-            psf_dims=data['psf_dims'],
+            exps=data["explist"],
+            coadd_wcs=data["coadd_wcs"],
+            coadd_bbox=data["coadd_bbox"],
+            psf_dims=data["psf_dims"],
             rng=rng,
             remove_poisson=True,  # no object poisson noise in sims
         )
@@ -136,8 +128,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
     def runQuantum(self, butlerQC: pipeBase.ButlerQuantumContext,
                    inputRefs: pipeBase.InputQuantizedConnection,
                    outputRefs: pipeBase.OutputQuantizedConnection):
-        """
-        Construct warps and then coadds
+        """Construct warps and then coadds
 
         Notes
         -----
@@ -164,18 +155,17 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
 
 
 def make_inputs(explist, skyInfo, rng, num_to_keep=None):
-    """
-    make inputs for the coadding code
+    """Make inputs for the coadding code
 
     Parameters
     ----------
-    explist: list of ExposureF
+    explist: `list` [`ExposureF`]
         List of exposures to be coadded
-    skyInfo: dict
+    skyInfo: `dict`
         The skyInfo dict, must have .wcs and .bbox
-    rng: np.random.RandomState
+    rng: `~np.random.RandomState`
         Random number generator for noise image generation
-    num_to_keep: int, optional
+    num_to_keep: `int`, optional
         Optionally keep this many exposures
 
     Returns
@@ -189,11 +179,11 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
 
     bands = set()
     for exp in explist:
-        bands.add(exp.dataId['band'])
+        bands.add(exp.dataId["band"])
 
     if len(bands) > 1:
         raise ValueError(
-            'bound %d bands %s, expected one' % (len(bands), bands)
+            "Found %d bands %s, expected one" % (len(bands), bands)
         )
 
     # TODO Arun add code to remove calexp that have edges
@@ -212,28 +202,28 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     psf_dims = (max(psf_dims), ) * 2
 
     return {
-        'explist': explist,
-        'coadd_wcs': skyInfo.wcs,
-        'coadd_bbox': skyInfo.bbox,
-        'psf_dims': psf_dims,
+        "explist": explist,
+        "coadd_wcs": skyInfo.wcs,
+        "coadd_bbox": skyInfo.bbox,
+        "psf_dims": psf_dims,
     }
 
 
 def get_noise_exp(exp, rng):
-    """
-    get a noise image based on the input exposure
+    """Get a noise image based on the input exposure
 
     TODO gain correct separately in each amplifier, currently
     averaged
 
     Parameters
     ----------
-    exp: afw.image.ExposureF
+    exp: `~lsst.afw.image.ExposureF`
         The exposure upon which to base the noise
 
     Returns
     -------
-    noise exposure
+    noise_exp: `~lsst.afw.image.ExposureF`
+        A noise exposure with the same WCS and size as the input exposure.
     """
     signal = exp.image.array
     variance = exp.variance.array.copy()
@@ -271,7 +261,7 @@ def get_noise_exp(exp, rng):
 def hash_function(seed, tract, patch, band):
     """Generate a hash key given the base seed and metadata
     """
-    band_map = {'u': 1, 'g': 2, 'r': 3, 'i': 4, 'z': 5, 'y': 6}
+    band_map = {"u": 1, "g": 2, "r": 3, "i": 4, "z": 5, "y": 6}
     # Add a linear combination of metadata weighted by prime numbers
     hash_key = seed + 131071*tract + 524287*patch + 8388607*band_map[band]
     return hash_key
