@@ -187,14 +187,22 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
         )
 
     # TODO Arun add code to remove calexp that have edges
+    cell_wcs = skyInfo.wcs
+    cell_corners = [cell_wcs.pixelToSky(corner) for corner in skyInfo.bbox.getCorners()]
+    edgless_explist = []
+    for exp in explist:
+        calexp_bbox = exp.getBBox()
+        calexp_wcs = exp.getWcs()
+        if np.all([calexp_bbox.contains(calexp_wcs.skyToPixel(corner) for corner in cell_corners]):
+            edgless_explist.append(exp)
 
     if num_to_keep is not None:
-        ntot = len(explist)
+        ntot = len(edgless_explist)
         mid = ntot // 4
-        explist = explist[mid:mid + num_to_keep]
+        edgless_explist = edgeless_explist[mid:mid + num_to_keep]
 
     # base psf size on last exp
-    psf = explist[0].get().getPsf()
+    psf = edgeless_explist[0].get().getPsf()
     pos = geom.Point2D(x=100, y=100)
     psfim = psf.computeImage(pos)
 
@@ -202,7 +210,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     psf_dims = (max(psf_dims), ) * 2
 
     return {
-        "explist": explist,
+        "explist": edgeless_explist,
         "coadd_wcs": skyInfo.wcs,
         "coadd_bbox": skyInfo.bbox,
         "psf_dims": psf_dims,
