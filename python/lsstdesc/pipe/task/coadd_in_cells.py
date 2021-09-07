@@ -193,7 +193,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     for exp in explist:
         calexp_bbox = exp.getBBox()
         calexp_wcs = exp.getWcs()
-        if np.all([calexp_bbox.contains(calexp_wcs.skyToPixel(corner) for corner in cell_corners]):
+        if np.all([calexp_bbox.contains(calexp_wcs.skyToPixel(corner)) for corner in cell_corners]):
             edgless_explist.append(exp)
 
     if num_to_keep is not None:
