@@ -76,7 +76,9 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
         self.log.info("seed: %d", self.config.seed)
         self.log.info("num exp: %d", len(calExpList))
 
-        hash_key = hash_function(self.config.seed, skyInfo.tract, skyInfo.patch, calExpList[0].dataId["band"])
+        patchId = skyInfo.patchInfo.getIndex()[1]+5 + skyInfo.patchInfo.getIndex()[0]
+        hash_key = hash_function(self.config.seed, skyInfo.tractInfo.getId(),
+                patchId, calExpList[0].dataId["band"])
         rng = np.random.RandomState(hash_key)
 
         # We need to explicitly get the images since we deferred loading.
@@ -188,21 +190,21 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
 
     # TODO Arun add code to remove calexp that have edges
     cell_wcs = skyInfo.wcs
-    cell_corners = [cell_wcs.pixelToSky(corner) for corner in skyInfo.bbox.getCorners()]
-    edgless_explist = []
+    cell_corners = [cell_wcs.pixelToSky(corner.x, corner.y) for corner in skyInfo.bbox.getCorners()]
+    edgeless_explist = []
     for exp in explist:
-        calexp_bbox = exp.getBBox()
-        calexp_wcs = exp.getWcs()
-        if np.all([calexp_bbox.contains(calexp_wcs.skyToPixel(corner)) for corner in cell_corners]):
-            edgless_explist.append(exp)
+        calexp_bbox = exp.get(component='bbox')
+        calexp_wcs = exp.get(component='wcs')
+        if np.all([calexp_bbox.contains(geom.Point2I(calexp_wcs.skyToPixel(corner))) for corner in cell_corners]):
+            edgeless_explist.append(exp)
 
     if num_to_keep is not None:
-        ntot = len(edgless_explist)
+        ntot = len(edgeless_explist)
         mid = ntot // 4
-        edgless_explist = edgeless_explist[mid:mid + num_to_keep]
+        edgeless_explist = edgeless_explist[mid:mid + num_to_keep]
 
     # base psf size on last exp
-    psf = edgeless_explist[0].get().getPsf()
+    psf = edgeless_explist[0].get(component='psf')
     pos = geom.Point2D(x=100, y=100)
     psfim = psf.computeImage(pos)
 
