@@ -72,13 +72,14 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
     # @pipeBase.timeMethod
     def run(self,
             calExpList: typing.List[lsst.afw.image.ExposureF],
-            skyInfo: pipeBase.Struct) -> pipeBase.Struct:
-        # import pdb
+            skyInfo: pipeBase.Struct, patchId=None) -> pipeBase.Struct:
 
         self.log.info("seed: %d", self.config.seed)
         self.log.info("num exp: %d", len(calExpList))
 
-        patchId = skyInfo.patchInfo.getIndex()[1]+5 + skyInfo.patchInfo.getIndex()[0]
+        if patchId is None:
+            # TODO: Replace this hack with something better
+            patchId = skyInfo.patchInfo.getIndex()[1]+5 + skyInfo.patchInfo.getIndex()[0]
         hash_key = hash_function(self.config.seed, skyInfo.tractInfo.getId(),
                 patchId, calExpList[0].dataId["band"])
         rng = np.random.RandomState(hash_key)
@@ -116,6 +117,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             rng=rng,
             num_to_keep=3,
         )
+
         coadd_obs = make_coadd_obs(
             exps=data["explist"],
             coadd_wcs=data["coadd_wcs"],
@@ -152,7 +154,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
         )
 
         # Run the warp and coaddition code
-        outputs = self.run(inputs["calExpList"], skyInfo=skyInfo)
+        outputs = self.run(inputs["calExpList"], skyInfo=skyInfo, patchId=quantumDataId["patch"])
 
         # Persist the results via the butler
         butlerQC.put(outputs.coadd, outputRefs.coadd)
