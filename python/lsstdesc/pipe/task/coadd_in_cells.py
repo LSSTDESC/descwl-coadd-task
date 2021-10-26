@@ -52,6 +52,7 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
         optional=False,
         doc="Base seed for the random number generator",
     )
+    # TODO: Remove this field
     interp_bright = Field(
         dtype=bool,
         default=True,
@@ -67,6 +68,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
     ConfigClass = CoaddInCellsConfig
     _DefaultName = "coaddsInCellsV1"
 
+    # TODO: Have two subtasks, one calling DESC coadd, on DM coadd
     # @pipeBase.timeMethod
     def run(self,
             calExpList: typing.List[lsst.afw.image.ExposureF],
@@ -183,6 +185,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     for exp in explist:
         bands.add(exp.dataId["band"])
 
+    # TODO: Remove this unnecessary check
     if len(bands) > 1:
         raise ValueError(
             "Found %d bands %s, expected one" % (len(bands), bands)
@@ -191,6 +194,7 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     # TODO Arun add code to remove calexp that have edges
     cell_wcs = skyInfo.wcs
     cell_corners = [cell_wcs.pixelToSky(corner.x, corner.y) for corner in skyInfo.bbox.getCorners()]
+    # TODO: Check the reverse mapping
     edgeless_explist = []
     for exp in explist:
         calexp_bbox = exp.get(component='bbox')
