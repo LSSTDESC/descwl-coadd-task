@@ -191,15 +191,19 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
             "Found %d bands %s, expected one" % (len(bands), bands)
         )
 
-    # TODO Arun add code to remove calexp that have edges
+    cell_bbox = skyInfo.bbox
     cell_wcs = skyInfo.wcs
-    cell_corners = [cell_wcs.pixelToSky(corner.x, corner.y) for corner in skyInfo.bbox.getCorners()]
-    # TODO: Check the reverse mapping
+    cell_corners = [cell_wcs.pixelToSky(corner.x, corner.y) for corner in cell_bbox.getCorners()]
+    calexp_corners = []
+    # TODO: Check the reverse mapping - DONE
     edgeless_explist = []
     for exp in explist:
         calexp_bbox = exp.get(component='bbox')
         calexp_wcs = exp.get(component='wcs')
-        if np.all([calexp_bbox.contains(geom.Point2I(calexp_wcs.skyToPixel(corner))) for corner in cell_corners]):
+        edgeless = np.all([calexp_bbox.contains(geom.Point2I(calexp_wcs.skyToPixel(corner))) for corner in cell_corners])
+        calexp_corners = [calexp_wcs.pixelToSky(corner.x, corner.y) for corner in calexp_bbox.getCorners()]
+        edgeless &= not np.any([cell_bbox.contains(geom.Point2I(cell_wcs.skyToPixel(corner))) for corner in calexp_corners])
+        if edgeless:
             edgeless_explist.append(exp)
 
     if num_to_keep is not None:
