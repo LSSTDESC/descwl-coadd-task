@@ -208,11 +208,12 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
         edgeless_explist = edgeless_explist[mid:mid + num_to_keep]
 
     # base psf size on last exp
+    # TODO: Should we make `psf_dims` configurable?
     psf = edgeless_explist[0].get(component='psf')
-    pos = geom.Point2D(x=100, y=100)
-    psfim = psf.computeImage(pos)
+    pos = geom.Point2I(x=100, y=100)
+    psf_bbox = psf.computeBBox(pos)
 
-    psf_dims = psfim.array.shape
+    psf_dims = psf_bbox.getDimensions()
     psf_dims = (max(psf_dims), ) * 2
 
     return {
