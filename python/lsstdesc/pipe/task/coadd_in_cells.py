@@ -47,10 +47,22 @@ class CoaddInCellsConfig(pipeBase.PipelineTaskConfig,
                          pipelineConnections=CoaddInCellsConnections):
     """Configuration parameters for the `CoaddInCellsTask`.
     """
+    def _isOdd(x: int) -> bool:  # noqa: N805
+        """Returns True if the input ``x`` is positive and odd, else False.
+        """
+        return (x%2 == 1) & (x > 0)
+
     seed = Field(
         dtype=int,
         optional=False,
         doc="Base seed for the random number generator",
+    )
+    # TODO: Make this variable name clearer
+    psf_dims = Field(
+        dtype=int,
+        default=51,
+        doc="Size of the PSF image. Must be odd",
+        check=_isOdd,
     )
     # TODO: Remove this field
     interp_bright = Field(
@@ -122,7 +134,7 @@ class CoaddInCellsTask(pipeBase.PipelineTask):
             exps=data["explist"],
             coadd_wcs=data["coadd_wcs"],
             coadd_bbox=data["coadd_bbox"],
-            psf_dims=data["psf_dims"],
+            psf_dims=self.config.psf_dims,
             rng=rng,
             remove_poisson=True,  # no object poisson noise in sims
         )
@@ -180,7 +192,6 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
         'explist': list of exposures to use
         'coadd_wcs': DM wcs object
         'coadd_bbox': DM bbox object
-        'psf_dims': dimensions of psf
     """
 
     bands = set()
@@ -213,20 +224,10 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
         mid = ntot // 4
         edgeless_explist = edgeless_explist[mid:mid + num_to_keep]
 
-    # base psf size on last exp
-    # TODO: Should we make `psf_dims` configurable?
-    psf = edgeless_explist[0].get(component='psf')
-    pos = geom.Point2I(x=100, y=100)
-    psf_bbox = psf.computeBBox(pos)
-
-    psf_dims = psf_bbox.getDimensions()
-    psf_dims = (max(psf_dims), ) * 2
-
     return {
         "explist": edgeless_explist,
         "coadd_wcs": skyInfo.wcs,
         "coadd_bbox": skyInfo.bbox,
-        "psf_dims": psf_dims,
     }
 
 
