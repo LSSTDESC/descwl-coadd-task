@@ -9,6 +9,7 @@ import lsst.afw.image as afwImage
 from lsst.pipe.tasks.coaddBase import makeSkyInfo
 import lsst.utils
 import lsst.geom as geom
+import lsst.sphgeom
 from lsst.pex.config import Field
 from descwl_coadd import make_coadd_obs
 
@@ -207,16 +208,16 @@ def make_inputs(explist, skyInfo, rng, num_to_keep=None):
     cell_bbox = skyInfo.bbox
     cell_wcs = skyInfo.wcs
     cell_corners = [cell_wcs.pixelToSky(corner.x, corner.y) for corner in cell_bbox.getCorners()]
-    calexp_corners = []
+
     # TODO: Check the reverse mapping - DONE
     edgeless_explist = []
     for exp in explist:
         calexp_bbox = exp.get(component='bbox')
         calexp_wcs = exp.get(component='wcs')
-        edgeless = np.all([calexp_bbox.contains(geom.Point2I(calexp_wcs.skyToPixel(corner))) for corner in cell_corners])
         calexp_corners = [calexp_wcs.pixelToSky(corner.x, corner.y) for corner in calexp_bbox.getCorners()]
-        edgeless &= not np.any([cell_bbox.contains(geom.Point2I(cell_wcs.skyToPixel(corner))) for corner in calexp_corners])
-        if edgeless:
+        skyCell = lsst.sphgeom.ConvexPolygon([corner.getVector() for corner in cell_corners])
+        skyCalexp = lsst.sphgeom.ConvexPolygon([corner.getVector() for corner in calexp_corners])
+        if skyCell.isWithin(skyCalexp):
             edgeless_explist.append(exp)
 
     if num_to_keep is not None:
