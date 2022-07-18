@@ -1,0 +1,39 @@
+# This workflow checks if the code adheres to the expected guidelines
+name: lint
+
+on:
+  push:
+    branches:
+      - master
+  pull_request: null
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
+
+      - name: Install flake8
+        run: pip install flake8==4.0
+
+      - name: Run linter
+        run: flake8
+
+      - name: Install black and isort
+        run: pip install black isort
+
+      - name: Run isort
+        run: |
+          isort --verbose --check-only \
+               $(test -e descwl_coadd_task/ && echo 'descwl_coadd_task/') \
+               $(test -e tests/ && echo 'tests/')
+      - name: Run black
+        run: |
+          black --check --verbose --diff \
+               $(test -e descwl_coadd_task/ && echo 'descwl_coadd_task/') \
+               $(test -e tests/ && echo 'tests/')
