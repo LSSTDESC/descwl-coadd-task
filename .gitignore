@@ -1,0 +1,17 @@
+
+*.pyc
+
+# Pytest
+tests/.tests
+pytest_session.txt
+.cache/
+.pytest_cache
+.coverage
+
+# VSCode
+.vscode/
+.env
+*.code-workspace
+
+# MyPy
+.mypy_cache/
