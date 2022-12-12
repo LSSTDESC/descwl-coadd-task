@@ -3,12 +3,14 @@ from __future__ import annotations
 from typing import Mapping, Tuple
 
 import lsst.geom as geom
-import lsst.pipe.base as pipeBase
 import numpy as np
 from descwl_coadd import make_coadd_obs
 from lsst.cell_coadds import (
+    CellIdentifiers,
+    CommonComponents,
     ObservationIdentifiers,
     OwnedImagePlanes,
+    SingleCellCoadd,
     SingleCellCoaddBuilderConfig,
     SingleCellCoaddBuilderTask,
     singleCellCoaddBuilderRegistry,
@@ -39,7 +41,8 @@ class SCCBuilder(SingleCellCoaddBuilderTask):
             ObservationIdentifiers, Tuple[DeferredDatasetHandle, geom.Box2I]
         ],
         cellInfo: CellInfo,
-    ):
+        common: CommonComponents,
+    ) -> SingleCellCoadd:
         exp_list = [_v[0].get(bbox=_v[1]) for _k, _v in inputs.items()]
         # Any further selection/rejection of exposures should be done here.
         coadd_obs, exp_info = make_coadd_obs(
@@ -59,8 +62,22 @@ class SCCBuilder(SingleCellCoaddBuilderTask):
             noise_realizations=(coadd_obs.coadd_noise_exp.image,),
             mask_fractions={},
         )
-        return pipeBase.Struct(
-            image_planes=image_planes,
-            psf=coadd_obs.coadd_exp.psf.computeKernelImage(center),
-            inputs=inputs,
+
+        identifiers = CellIdentifiers(
+            cell=cellInfo.index,
+            skymap=common.identifiers.skymap,
+            tract=common.identifiers.tract,
+            patch=common.identifiers.patch,
+            band=common.identifiers.band,
         )
+
+        cellCoadd = SingleCellCoadd(
+            outer=image_planes,  # type: ignore[attr-defined]
+            psf=coadd_obs.coadd_exp.psf.computeKernelImage(center),  # type: ignore[attr-defined]
+            inner_bbox=cellInfo.inner_bbox,
+            inputs=inputs,  # type: ignore[attr-defined]
+            common=common,
+            identifiers=identifiers,
+        )
+
+        return cellCoadd
