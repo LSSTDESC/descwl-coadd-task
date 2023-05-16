@@ -43,7 +43,7 @@ class SCCBuilder(SingleCellCoaddBuilderTask):
         cellInfo: CellInfo,
         common: CommonComponents,
     ) -> SingleCellCoadd:
-        exp_list = [_v[0].get(bbox=_v[1]) for _k, _v in inputs.items()]
+        exp_list = [_v[0].get(parameters={"bbox": _v[1]}) for _k, _v in inputs.items()]
         # Any further selection/rejection of exposures should be done here.
         coadd_obs, exp_info = make_coadd_obs(
             exps=exp_list,
