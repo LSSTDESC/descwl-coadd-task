@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from typing import Mapping, Tuple
 
+import lsst.afw.math as afwMath
 import lsst.geom as geom
 import numpy as np
-from descwl_coadd import make_coadd_obs
+from descwl_coadd import make_coadd_obs, make_warps, MAX_MASKFRAC, DEFAULT_INTERP
 from lsst.cell_coadds import (
     CellIdentifiers,
     CommonComponents,
@@ -16,7 +17,8 @@ from lsst.cell_coadds import (
     singleCellCoaddBuilderRegistry,
 )
 from lsst.daf.butler import DeferredDatasetHandle
-from lsst.pex.config import Field, registerConfigurable
+from lsst.pex.config import Config, ConfigField, Field, registerConfigurable
+from lsst.pipe.base import Task
 from lsst.skymap import CellInfo
 
 
@@ -27,6 +29,7 @@ class SCCBuilderConfig(SingleCellCoaddBuilderConfig):
         dtype=int,
         optional=False,
     )
+
 
 
 @registerConfigurable("descCoaddBuilder", singleCellCoaddBuilderRegistry)
@@ -43,7 +46,8 @@ class SCCBuilder(SingleCellCoaddBuilderTask):
         cellInfo: CellInfo,
         common: CommonComponents,
     ) -> SingleCellCoadd:
-        exp_list = [_v[0].get(parameters={"bbox": _v[1]}) for _k, _v in inputs.items()]
+        # exp_list = [_v[0].get(parameters={"bbox": _v[1]}) for _k, _v in inputs.items()]
+        exp_list = [_v[0].get() for _k, _v in inputs.items()]
         # Any further selection/rejection of exposures should be done here.
         coadd_obs, exp_info = make_coadd_obs(
             exps=exp_list,
@@ -81,3 +85,6 @@ class SCCBuilder(SingleCellCoaddBuilderTask):
         )
 
         return cellCoadd
+
+
+
