@@ -98,7 +98,8 @@ class MakeShearWarpConnections(
                 doc="Output direct warped noise image produced by resampling"
                 "resampling calexps onto the skyMap patch geometry.",
                 name=f"{config.connections.calexpType}calexp_noise{n}_descwarp",
-                storageClass="ImageF",
+                # Store it as a MaskedImage to preserve the variance plane.
+                storageClass="MaskedImageF",
                 dimensions=("tract", "patch", "skymap", "visit", "instrument"),
             )
             setattr(self, f"noise{n}_warp", noise_warp)
@@ -386,7 +387,7 @@ class MakeShearWarpTask(PipelineTask):
         result = pipeBase.Struct(
             warp=final_warp,
             mfrac_warp=final_mfrac_warp.image,
-            noise0_warp=final_noise_warp.image,
+            noise0_warp=final_noise_warp.getMaskedImage(),
         )
         return result
 

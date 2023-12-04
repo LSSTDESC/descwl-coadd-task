@@ -65,7 +65,6 @@ class AssembleShearCoaddConnections(
     )
     mfrac_warps = Input(
         doc="Masked fraction on the input warp",
-        # name="calexp_mfracwarp",
         name="calexp_mfrac_descwarp",
         storageClass="ImageF",
         dimensions=("tract", "patch", "skymap", "visit", "instrument"),
@@ -108,7 +107,7 @@ class AssembleShearCoaddConnections(
             noise_warps = Input(
                 doc="Input noise warp to be coadded.",
                 name=f"{config.connections.coaddType}calexp_noise{n}_descwarp",
-                storageClass="ImageF",
+                storageClass="MaskedImageF",
                 dimensions=("tract", "patch", "skymap", "visit", "instrument"),
                 deferLoad=True,
                 multiple=True,
