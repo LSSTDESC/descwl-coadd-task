@@ -1,29 +1,18 @@
 # descwl-coadd-task
 Task to run coaddition in cells
 
-## Setting up the environment at NCSA
+## Setting up the environment at USDF (for Gen3 butler)
 
-Load the shared `lsst-scipipe` environment:
+Load a custom conda environment that has the Rubin Science Pipelines and other relevant packages installed.
 
-```bash
-source /software/lsst/stack/loadLSST.bash
-setup lsst_distrib
-```
-
-Then stack another shared conda environment with relevant LSSTDESC packages on top of it.
+For example,
 
 ```bash
-conda activate --stack /project/kannawad/descrepos/conda/desc-scipipe-20220525-shared
+conda activate /sdf/home/e/esheldon/miniconda3/envs/stack
 ```
 
-Since the `cell_coadds` package is not part of the Rubin Science Pipelines, this needs to be setup manually.
+Regularly update the ``stackvana`` package in the environment.
 
-```bash
-git clone https://github.com/lsst-dm/cell_coadds.git
-cd cell_coadds
-setup -k -r .
-scons -j 4
-```
 
 Similarly, you must setup this package or manually add the parent directory your `PYTHONPATH`.
 ```bash
@@ -34,15 +23,49 @@ setup -k -r .
 Setup some convenient environment variables:
 
 ```bash
-export REPO=/repo/dc2
-export INPUT_COLLECTION=2.2i/runs/test-med-1/w_2022_18/DM-34608
+export REPO=/sdf/data/rubin/repo/dc2
+export INPUT_COLLECTION=2.2i/runs/test-med-1/w_2023_49/DM-42037
 ```
 
-Finally, invoke the `pipetask run` command. Since the cell-based coaddition is not part of any pipeline, the bare task has to be invoked.
-To produce the coadd for `tract=3828`, `patch=19` and `band="i"`, run:
+Finally, invoke the `pipetask run` command.
+To produce the coadd for `tract=3828`, `patch=19` and `band="i", "r"`, run:
 
 ```bash
-pipetask run --task lsst.cell_coadds.MultipleCellCoaddBuilderTask -b $REPO -i $INPUT_COLLECTION -o u/$USER/coaddTest -d "skymap='DC2_cells_v1' AND tract=3828 AND patch=19 AND band='i'" --config-file multipleCellCoaddBuilder:config/config.py
+pipetask run -p pipeline.yaml -b $REPO -i $INPUT_COLLECTION -o u/$USER/coaddTest -d "skymap='DC2_cells_v1' AND tract=3828 AND patch=19 AND band IN ('i', 'r')"
 ```
 
 If the output dataset has never been registered with the butler before, then the first time you run this command (and only for the first time), you will need to include `--register-dataset-types` option to the `pipetask run` command.
+
+## Notes on the pipeline file
+
+A minimal pipeline file is provided in `pipeline.yaml`.
+This file currently calls the `PipelineTask`s to generate warps and to generate
+coadds from the warps.
+While bare tasks can be run using the ``--task`` invocation instead of `-p`, it
+is recommended to run the pipeline file instead.
+The pipeline file enforces 'contracts' that ensure that the different `Task`s
+are configured in a consistent manner.
+For instance, attempting to warp the PSF with a different kernel than that was
+used to warp the images using
+```bash
+pipetask run -p pipeline.yaml -b $REPO -i $INPUT_COLLECTION -o u/$USER/coaddTest \
+-d "skymap='DC2_cells_v1' AND tract=3828 AND patch=19 AND band IN ('i', 'r') \
+-c "assembleCoadd:psf_warper.warpingKernelName='lanczos5'"
+```
+would result in an error.
+
+## Notes on configurability of the `PipelineTask`s
+
+The `PipelineTask`s are highly configurable and can be configured in multiple
+places.
+
+1. Default values specified in the definition of the `Config` field.
+2. Default values overridden in the `setDefaults` method of the `ConfigClass`.
+3. Instrument-specific values in the `obs_*` package.
+4. Values specified in the pipeline file.
+5. Values specified as a config file with an invocation of `-C`.
+6. Values specified on the command-line with an invocation of `-c`.
+
+Because the values can be overridden multiple times, the final set of
+configuration values that the `Task`s were run with is stored as an output
+itself (which can be reused with the `-C` option).
