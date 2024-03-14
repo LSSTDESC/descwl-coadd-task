@@ -371,13 +371,6 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
 
         cells: list[SingleCellCoadd] = []
         for cellInfo in skyInfo.patchInfo:
-            # coadd_inputs = self.inputRecorder.makeCoaddInputs()
-            # # Reserve the absolute maximum of how many ccds, visits
-            # # we could potentially have.
-            # coadd_inputs.ccds.reserve(len(input_warps))
-            # coadd_inputs.visits.reserve(len(input_warps))
-            # coadd_inputs_gc[cellInfo.index] = coadd_inputs
-
             bbox = cellInfo.outer_bbox
             # Read in one warp at a time, and accumulate it in all the cells
             # that it completely overlaps.
