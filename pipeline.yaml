@@ -11,9 +11,6 @@ tasks:
     class: descwl_coadd_task.AssembleShearCoaddSlowTask
     config:
       connections.multiple_cell_coadd: shearCoadd
-      psf_dimensions: 21
-      remove_poisson: False
-  # TODO: Metadection goes here.
 
 # Ensure that the various tasks are configured in an self-consistent manner.
 contracts:
