@@ -1,22 +1,19 @@
-
 from __future__ import annotations
 
+import unittest
 from typing import Self, Type
 
-import unittest
-
-import numpy as np
-
-import lsst.utils.tests
-
+import lsst.afw.cameraGeom.testUtils
 import lsst.afw.image
+import lsst.skymap as skyMap
+import lsst.utils.tests
+import numpy as np
+from lsst.afw.detection import GaussianPsf
 from lsst.daf.butler import DataCoordinate, DimensionUniverse
 from lsst.pipe.base import InMemoryDatasetHandle
-from descwl_coadd_task import (MakeShearWarpConfig, MakeShearWarpTask,)
 from lsst.pipe.tasks.coaddBase import makeSkyInfo
-import lsst.skymap as skyMap
-from lsst.afw.detection import GaussianPsf
-import lsst.afw.cameraGeom.testUtils
+
+from descwl_coadd_task import MakeShearWarpConfig, MakeShearWarpTask
 
 
 class MakeWarpTestCase(lsst.utils.tests.TestCase):
@@ -27,33 +24,45 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
 
         meanCalibration = 1e-4
         calibrationErr = 1e-5
-        self.exposurePhotoCalib = lsst.afw.image.PhotoCalib(meanCalibration, calibrationErr)
+        self.exposurePhotoCalib = lsst.afw.image.PhotoCalib(
+            meanCalibration, calibrationErr
+        )
         # An external photoCalib calibration to return
         self.externalPhotoCalib = lsst.afw.image.PhotoCalib(1e-6, 1e-8)
 
         crpix = lsst.geom.Point2D(0, 0)
         crval = lsst.geom.SpherePoint(0, 45, lsst.geom.degrees)
-        cdMatrix = lsst.afw.geom.makeCdMatrix(scale=1.0*lsst.geom.arcseconds)
+        cdMatrix = lsst.afw.geom.makeCdMatrix(scale=1.0 * lsst.geom.arcseconds)
         self.skyWcs = lsst.afw.geom.makeSkyWcs(crpix, crval, cdMatrix)
-        externalCdMatrix = lsst.afw.geom.makeCdMatrix(scale=0.9*lsst.geom.arcseconds)
+        externalCdMatrix = lsst.afw.geom.makeCdMatrix(scale=0.9 * lsst.geom.arcseconds)
         # An external skyWcs to return
         self.externalSkyWcs = lsst.afw.geom.makeSkyWcs(crpix, crval, externalCdMatrix)
 
         self.exposure = lsst.afw.image.ExposureF(100, 150)
-        self.exposure.maskedImage.image.array = np.random.random((150, 100)).astype(np.float32) * 1000
-        self.exposure.maskedImage.variance.array = np.random.random((150, 100)).astype(np.float32)
+        self.exposure.maskedImage.image.array = (
+            np.random.random((150, 100)).astype(np.float32) * 1000
+        )
+        self.exposure.maskedImage.variance.array = np.random.random((150, 100)).astype(
+            np.float32
+        )
         # mask at least one pixel
         self.exposure.maskedImage.mask[5, 5] = 3
         # set the PhotoCalib and Wcs objects of this exposure.
-        self.exposure.setPhotoCalib(lsst.afw.image.PhotoCalib(meanCalibration, calibrationErr))
+        self.exposure.setPhotoCalib(
+            lsst.afw.image.PhotoCalib(meanCalibration, calibrationErr)
+        )
         self.exposure.setWcs(self.skyWcs)
         self.exposure.setPsf(GaussianPsf(5, 5, 2.5))
-        self.exposure.setFilter(lsst.afw.image.FilterLabel(physical="fakeFilter", band="fake"))
+        self.exposure.setFilter(
+            lsst.afw.image.FilterLabel(physical="fakeFilter", band="fake")
+        )
 
         self.visit = 100
         self.detector = 5
         detectorName = f"detector {self.detector}"
-        detector = lsst.afw.cameraGeom.testUtils.DetectorWrapper(name=detectorName, id=self.detector).detector
+        detector = lsst.afw.cameraGeom.testUtils.DetectorWrapper(
+            name=detectorName, id=self.detector
+        ).detector
         self.exposure.setDetector(detector)
 
         dataId_dict = {"detector_id": self.detector, "visit_id": 1248, "band": "i"}
@@ -79,7 +88,7 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         detector_id: int = 9,
         visit_id: int = 1234,
         detector_max: int = 109,
-        visit_max: int = 10000
+        visit_max: int = 10000,
     ) -> DataCoordinate:
         """Generate a DataCoordinate instance to use as data_id.
 
@@ -128,11 +137,15 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         detector_record = detector.RecordClass(id=detector_id, instrument="test")
 
         physical_filter = universe["physical_filter"]
-        physical_filter_record = physical_filter.RecordClass(name=band, instrument="test", band=band)
+        physical_filter_record = physical_filter.RecordClass(
+            name=band, instrument="test", band=band
+        )
 
         patch_element = universe["patch"]
         patch_record = patch_element.RecordClass(
-            skymap="test_skymap", tract=tract, patch=patch,
+            skymap="test_skymap",
+            tract=tract,
+            patch=patch,
         )
 
         if "day_obs" in universe:
@@ -171,14 +184,12 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         makeWarp = MakeShearWarpTask(config=self.config)
         inputs = {"calexp_list": [self.dataRef]}
         result = makeWarp.run(
-            inputs["calexp_list"],
-            skyInfo=self.skyInfo,
-            visit_summary=None
+            inputs["calexp_list"], skyInfo=self.skyInfo, visit_summary=None
         )
 
         warp = result.warp
-        mfrac = result.masked_fraction_warp
-        noise = result.noise_warp0
+        mfrac = result.mfrac_warp
+        noise = result.noise0_warp
 
         # Ensure we got an exposure out
         self.assertIsInstance(warp, lsst.afw.image.ExposureF)
