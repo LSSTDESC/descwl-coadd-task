@@ -25,8 +25,8 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         config = MakeShearWarpConfig()
 
         data = _make_data(rng=self.rng)
-        dataRef = data['dataRef']
-        skyInfo = data['skyInfo']
+        dataRef = data["dataRef"]
+        skyInfo = data["skyInfo"]
 
         makeWarp = MakeShearWarpTask(config=config)
         inputs = {"calexp_list": [dataRef]}
@@ -71,8 +71,8 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         # this masks a single pixel, which then propagates to mfrac
         # in a set of neighboring pixels
         data = _make_data(rng=self.rng, mask_pixel=True)
-        dataRef = data['dataRef']
-        skyInfo = data['skyInfo']
+        dataRef = data["dataRef"]
+        skyInfo = data["skyInfo"]
 
         makeWarp = MakeShearWarpTask(config=config)
         inputs = {"calexp_list": [dataRef]}
@@ -102,66 +102,57 @@ def _make_data(rng, mask_pixel=False):
 
     meanCalibration = 1e-4
     calibrationErr = 1e-5
-    data['exposurePhotoCalib'] = afw_image.PhotoCalib(
-        meanCalibration, calibrationErr
-    )
+    data["exposurePhotoCalib"] = afw_image.PhotoCalib(meanCalibration, calibrationErr)
     # An external photoCalib calibration to return
-    data['externalPhotoCalib'] = afw_image.PhotoCalib(1e-6, 1e-8)
+    data["externalPhotoCalib"] = afw_image.PhotoCalib(1e-6, 1e-8)
 
     crpix = lsst.geom.Point2D(0, 0)
     crval = lsst.geom.SpherePoint(0, 45, lsst.geom.degrees)
     cdMatrix = lsst.afw.geom.makeCdMatrix(scale=1.0 * lsst.geom.arcseconds)
-    data['skyWcs'] = lsst.afw.geom.makeSkyWcs(crpix, crval, cdMatrix)
+    data["skyWcs"] = lsst.afw.geom.makeSkyWcs(crpix, crval, cdMatrix)
     externalCdMatrix = lsst.afw.geom.makeCdMatrix(scale=0.9 * lsst.geom.arcseconds)
     # An external skyWcs to return
-    data['externalSkyWcs'] = lsst.afw.geom.makeSkyWcs(crpix, crval, externalCdMatrix)
+    data["externalSkyWcs"] = lsst.afw.geom.makeSkyWcs(crpix, crval, externalCdMatrix)
 
     exposure = afw_image.ExposureF(nx, ny)
-    data['exposure'] = exposure
+    data["exposure"] = exposure
 
     exposure.maskedImage.image.array = (
         rng.uniform(size=(ny, nx)).astype(np.float32) * 1000
     )
     exposure.maskedImage.variance.array = rng.uniform(
-        low=0.98, high=1.0,
-        size=(ny, nx)
-    ).astype(
-        np.float32
-    )
+        low=0.98, high=1.0, size=(ny, nx)
+    ).astype(np.float32)
 
     if mask_pixel:
-        exposure.maskedImage.mask[5, 5] = afw_image.Mask.getPlaneBitMask('SAT')
+        exposure.maskedImage.mask[5, 5] = afw_image.Mask.getPlaneBitMask("SAT")
 
     # set the PhotoCalib and Wcs objects of this exposure.
-    exposure.setPhotoCalib(
-        afw_image.PhotoCalib(meanCalibration, calibrationErr)
-    )
-    exposure.setWcs(data['skyWcs'])
+    exposure.setPhotoCalib(afw_image.PhotoCalib(meanCalibration, calibrationErr))
+    exposure.setWcs(data["skyWcs"])
     exposure.setPsf(GaussianPsf(5, 5, 2.5))
-    exposure.setFilter(
-        afw_image.FilterLabel(physical="fakeFilter", band="fake")
-    )
+    exposure.setFilter(afw_image.FilterLabel(physical="fakeFilter", band="fake"))
 
-    data['visit'] = 100
-    data['detector'] = 5
+    data["visit"] = 100
+    data["detector"] = 5
     detectorName = f"detector {data['detector']}"
     detector = lsst.afw.cameraGeom.testUtils.DetectorWrapper(
-        name=detectorName, id=data['detector']
+        name=detectorName, id=data["detector"]
     ).detector
     exposure.setDetector(detector)
 
-    dataId_dict = {"detector_id": data['detector'], "visit_id": 1248, "band": "i"}
+    dataId_dict = {"detector_id": data["detector"], "visit_id": 1248, "band": "i"}
     dataId = _generate_data_id(**dataId_dict)
-    data['dataRef'] = InMemoryDatasetHandle(exposure, dataId=dataId)
+    data["dataRef"] = InMemoryDatasetHandle(exposure, dataId=dataId)
     simpleMapConfig = skyMap.discreteSkyMap.DiscreteSkyMapConfig()
     simpleMapConfig.raList = [crval.getRa().asDegrees()]
     simpleMapConfig.decList = [crval.getDec().asDegrees()]
     simpleMapConfig.radiusList = [0.1]
 
-    data['simpleMap'] = skyMap.DiscreteSkyMap(simpleMapConfig)
-    data['tractId'] = 0
-    data['patchId'] = data['simpleMap'][0].findPatch(crval).sequential_index
-    data['skyInfo'] = makeSkyInfo(data['simpleMap'], data['tractId'], data['patchId'])
+    data["simpleMap"] = skyMap.DiscreteSkyMap(simpleMapConfig)
+    data["tractId"] = 0
+    data["patchId"] = data["simpleMap"][0].findPatch(crval).sequential_index
+    data["skyInfo"] = makeSkyInfo(data["simpleMap"], data["tractId"], data["patchId"])
 
     return data
 
