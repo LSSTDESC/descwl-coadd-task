@@ -75,7 +75,9 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
             # this masks a single pixel, which then propagates to mfrac
             # in a set of neighboring pixels
             data = _make_data(
-                rng=self.rng, mask_pixel=True, mask_bitname=mask_bitname,
+                rng=self.rng,
+                mask_pixel=True,
+                mask_bitname=mask_bitname,
             )
             dataRef = data["dataRef"]
             skyInfo = data["skyInfo"]
@@ -131,9 +133,7 @@ def _make_data(rng, mask_pixel=False, mask_bitname="SAT"):
     ).astype(np.float32)
 
     if mask_pixel:
-        exposure.maskedImage.mask[5, 5] = (
-            afw_image.Mask.getPlaneBitMask(mask_bitname)
-        )
+        exposure.maskedImage.mask[5, 5] = afw_image.Mask.getPlaneBitMask(mask_bitname)
 
     # set the PhotoCalib and Wcs objects of this exposure.
     exposure.setPhotoCalib(afw_image.PhotoCalib(meanCalibration, calibrationErr))
