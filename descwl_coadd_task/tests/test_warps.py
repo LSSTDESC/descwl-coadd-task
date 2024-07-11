@@ -68,22 +68,28 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
 
         config = MakeShearWarpConfig()
 
-        # this masks a single pixel, which then propagates to mfrac
-        # in a set of neighboring pixels
-        data = _make_data(rng=self.rng, mask_pixel=True)
-        dataRef = data["dataRef"]
-        skyInfo = data["skyInfo"]
+        # I could not get @pytest.mark.parametrize to work with the class
+        # method so we'll do a loop
+        for mask_bitname in ["BAD", "CR", "SAT"]:
 
-        makeWarp = MakeShearWarpTask(config=config)
-        inputs = {"calexp_list": [dataRef]}
-        result = makeWarp.run(
-            inputs["calexp_list"], skyInfo=skyInfo, visit_summary=None
-        )
+            # this masks a single pixel, which then propagates to mfrac
+            # in a set of neighboring pixels
+            data = _make_data(
+                rng=self.rng, mask_pixel=True, mask_bitname=mask_bitname,
+            )
+            dataRef = data["dataRef"]
+            skyInfo = data["skyInfo"]
 
-        mfrac = result.mfrac_warp
+            makeWarp = MakeShearWarpTask(config=config)
+            inputs = {"calexp_list": [dataRef]}
+            result = makeWarp.run(
+                inputs["calexp_list"], skyInfo=skyInfo, visit_summary=None
+            )
 
-        wbad = np.where(mfrac.array != 0)
-        assert wbad[0].size == 36
+            mfrac = result.mfrac_warp
+
+            wbad = np.where(mfrac.array != 0)
+            assert wbad[0].size == 36
 
 
 def setup_module(module):
@@ -94,7 +100,7 @@ class MatchMemoryTestCase(lsst.utils.tests.MemoryTestCase):
     pass
 
 
-def _make_data(rng, mask_pixel=False):
+def _make_data(rng, mask_pixel=False, mask_bitname="SAT"):
     ny = 150
     nx = 100
 
@@ -125,7 +131,9 @@ def _make_data(rng, mask_pixel=False):
     ).astype(np.float32)
 
     if mask_pixel:
-        exposure.maskedImage.mask[5, 5] = afw_image.Mask.getPlaneBitMask("SAT")
+        exposure.maskedImage.mask[5, 5] = (
+            afw_image.Mask.getPlaneBitMask(mask_bitname)
+        )
 
     # set the PhotoCalib and Wcs objects of this exposure.
     exposure.setPhotoCalib(afw_image.PhotoCalib(meanCalibration, calibrationErr))
