@@ -67,6 +67,7 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         """Test mfrac is being properly propagated"""
 
         config = MakeShearWarpConfig()
+        nexpected = 36
 
         # I could not get @pytest.mark.parametrize to work with the class
         # method so we'll do a loop
@@ -89,9 +90,14 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
             )
 
             mfrac = result.mfrac_warp
+            warp = result.warp
 
             wbad = np.where(mfrac.array != 0)
-            assert wbad[0].size == 36
+            assert wbad[0].size == nexpected
+
+            iflag = afw_image.Mask.getPlaneBitMask("INTRP")
+            wintrp = np.where(warp.mask.array & iflag != 0)
+            assert wintrp[0].size == nexpected
 
 
 def setup_module(module):
