@@ -63,41 +63,38 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
 
         # TODO add smoke tests of PSF when psf warps are added
 
-    def test_makeWarpMfrac(self):
+    @lsst.utils.tests.methodParameters(mask_bitname=["BAD", "CR", "SAT"])
+    def test_makeWarpMfrac(self, mask_bitname):
         """Test mfrac is being properly propagated"""
 
         config = MakeShearWarpConfig()
         nexpected = 36
 
-        # I could not get @pytest.mark.parametrize to work with the class
-        # method so we'll do a loop
-        for mask_bitname in ["BAD", "CR", "SAT"]:
+        # this masks a single pixel, which then propagates to mfrac
+        # in a set of neighboring pixels
+        data = _make_data(
+            rng=self.rng,
+            mask_pixel=True,
+            mask_bitname=mask_bitname,
+        )
+        dataRef = data["dataRef"]
+        skyInfo = data["skyInfo"]
 
-            # this masks a single pixel, which then propagates to mfrac
-            # in a set of neighboring pixels
-            data = _make_data(
-                rng=self.rng,
-                mask_pixel=True,
-                mask_bitname=mask_bitname,
-            )
-            dataRef = data["dataRef"]
-            skyInfo = data["skyInfo"]
+        makeWarp = MakeShearWarpTask(config=config)
+        inputs = {"calexp_list": [dataRef]}
+        result = makeWarp.run(
+            inputs["calexp_list"], skyInfo=skyInfo, visit_summary=None
+        )
 
-            makeWarp = MakeShearWarpTask(config=config)
-            inputs = {"calexp_list": [dataRef]}
-            result = makeWarp.run(
-                inputs["calexp_list"], skyInfo=skyInfo, visit_summary=None
-            )
+        mfrac = result.mfrac_warp
+        warp = result.warp
 
-            mfrac = result.mfrac_warp
-            warp = result.warp
+        wbad = np.where(mfrac.array != 0)
+        assert wbad[0].size == nexpected
 
-            wbad = np.where(mfrac.array != 0)
-            assert wbad[0].size == nexpected
-
-            iflag = afw_image.Mask.getPlaneBitMask("INTRP")
-            wintrp = np.where(warp.mask.array & iflag != 0)
-            assert wintrp[0].size == nexpected
+        iflag = afw_image.Mask.getPlaneBitMask("INTRP")
+        wintrp = np.where(warp.mask.array & iflag != 0)
+        assert wintrp[0].size == nexpected
 
 
 def setup_module(module):
