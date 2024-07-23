@@ -301,8 +301,11 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(mfrac.array.shape, expected_shape)
         self.assertEqual(noise.image.array.shape, expected_shape)
 
-        # we didn't mask any pixels for this test
-        self.assertTrue(np.all(mfrac.array[:, :] == 0))
+        # we didn't mask any pixels for this test, so the only mask bits
+        # should be NO_DATA.
+        self.assertTrue(
+            np.all(mfrac.array[:, :] & ~afw_image.Mask.getPlaneBitMask("NO_DATA") == 0)
+        )
 
     @lsst.utils.tests.methodParameters(mask_bitname=["BAD", "CR", "SAT"])
     def test_makeWarpMfrac(self, mask_bitname):
