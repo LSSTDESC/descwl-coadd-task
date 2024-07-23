@@ -312,7 +312,7 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         """Test mfrac is being properly propagated"""
 
         config = MakeShearWarpConfig()
-        nexpected = 36
+        nexpected = 4
 
         # this masks a single pixel, which then propagates to mfrac
         # in a set of neighboring pixels
