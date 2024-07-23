@@ -14,7 +14,6 @@ from lsst.pipe.tasks.coaddBase import makeSkyInfo
 
 from descwl_coadd_task import MakeShearWarpConfig, MakeShearWarpTask
 
-
 PIXEL_SCALE = 0.2
 """Pixel scale in arcseconds"""
 
