@@ -90,11 +90,11 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         warp = result.warp
 
         wbad = np.where(mfrac.array != 0)
-        assert wbad[0].size == nexpected
+        self.assertEqual(wbad[0].size, nexpected)
 
         iflag = afw_image.Mask.getPlaneBitMask("INTRP")
         wintrp = np.where(warp.mask.array & iflag != 0)
-        assert wintrp[0].size == nexpected
+        self.assertEqual(wintrp[0].size, nexpected)
 
 
 def setup_module(module):
