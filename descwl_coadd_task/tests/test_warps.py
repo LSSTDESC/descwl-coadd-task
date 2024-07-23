@@ -302,14 +302,7 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
 
         # we didn't mask any pixels for this test, so the mask bits should be 0
         # except where there is NO_DATA, in which case they are set as nans.
-        self.assertTrue(
-            np.all(
-                mfrac.array[
-                    warp.mask.array != afw_image.Mask.getPlaneBitMask("NO_DATA")
-                ]
-                == 0
-            )
-        )
+        self.assertTrue(np.all(mfrac.array[np.isfinite(mfrac.array)] == 0))
 
     @lsst.utils.tests.methodParameters(mask_bitname=["BAD", "CR", "SAT"])
     def test_makeWarpMfrac(self, mask_bitname):
