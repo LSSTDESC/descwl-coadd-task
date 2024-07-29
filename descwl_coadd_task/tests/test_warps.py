@@ -300,9 +300,14 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         self.assertEqual(mfrac.array.shape, expected_shape)
         self.assertEqual(noise.image.array.shape, expected_shape)
 
-        # we didn't mask any pixels for this test, so the mask bits should be 0
-        # except where there is NO_DATA, in which case they are set as nans.
-        self.assertTrue(np.all(mfrac.array[np.isfinite(mfrac.array)] == 0))
+        # We didn't mask any pixels for this test, so the mask bits should be 0
+        # except where there is NO_DATA and EDGE bits set due to chip gaps.
+        bit_mask = afw_image.Mask.getPlaneBitMask(
+            "NO_DATA"
+        ) | afw_image.Mask.getPlaneBitMask("EDGE")
+        # Slicing mfrac.array can consume too much memory in GitHub Actions.
+        # Multiply the matrices instead.
+        self.assertTrue((mfrac.array * (~(warp.mask.array & bit_mask)) == 0).all())
 
     @lsst.utils.tests.methodParameters(mask_bitname=["BAD", "CR", "SAT"])
     def test_makeWarpMfrac(self, mask_bitname):
