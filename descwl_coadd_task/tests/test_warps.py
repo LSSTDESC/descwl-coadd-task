@@ -47,6 +47,12 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         for exposureRef in self.dataRefs:
             self._fill_exposure(exposureRef.get())
 
+    def tearDown(self):
+        # Docstring inherited.
+        # This method cleans up the mask planes before the next test.
+        for exposureRef in self.dataRefs:
+            exposureRef.get().mask.clearAllMaskPlanes()
+
     @classmethod
     def _build_skyMap(cls):
         """Build a simple skyMap."""
