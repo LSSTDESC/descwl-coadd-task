@@ -354,7 +354,7 @@ def setup_module(module):
 
 
 class MatchMemoryTestCase(lsst.utils.tests.MemoryTestCase):
-    pass
+    """Check for resource leaks."""
 
 
 if __name__ == "__main__":
