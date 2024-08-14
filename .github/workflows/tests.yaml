@@ -33,13 +33,12 @@ jobs:
           channel-priority: strict
           show-channel-urls: true
           miniforge-version: latest
-          miniforge-variant: Mambaforge
 
       - name: Configure conda and install dependencies
         shell: bash -l {0}
         run: |
           conda config --set always_yes yes
-          mamba install -q stackvana=0
+          conda install -q stackvana=0
 
           pip install --no-deps git+https://github.com/LSSTDESC/descwl_coadd.git
 
