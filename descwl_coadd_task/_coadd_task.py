@@ -409,7 +409,8 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
                 )
 
                 # Pre-process the warp before coadding.
-                # TODO: Remove this step (see #4) and pass the refs once the warps have absolute calibration.
+                # TODO: Remove this step (see #4) and pass the refs once the
+                # warps have absolute calibration.
                 if self.config.do_scale_zero_point:
                     self.scale_zero_point.run(exposure=warp, dataRef=warp)
                     self.scale_zero_point.run(exposure=noise_warp, dataRef=noiseWarpRef)
