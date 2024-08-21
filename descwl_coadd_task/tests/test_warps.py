@@ -25,8 +25,10 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         # Docstring inherited.
         # This method contains the setup that needs to be done only once for
         # all the tests.
-        cls.ny = 4000
-        cls.nx = 4072
+        # cls.ny = 4000
+        # cls.nx = 4072
+        cls.ny = 150
+        cls.nx = 100
 
         cls._build_skyMap()
         cls._generate_photoCalib()
@@ -347,6 +349,95 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         iflag = afw_image.Mask.getPlaneBitMask("INTRP")
         wintrp = np.where(warp.mask.array & iflag != 0)
         self.assertEqual(wintrp[0].size, nexpected)
+
+    def test_makeWarpCompare(self):
+        """
+        Test the results match what we get calling warp_exposures directly
+
+        We need a version of this that persists to disk as well, to ensure the
+        round trip preserves the data
+        """
+        from descwl_coadd import warp_exposures
+
+        seed = 1122
+
+        config = MakeShearWarpConfig()
+
+        assert len(self.dataRefs) == 3
+
+        # this masks a single pixel, which then propagates to mfrac
+        # in a set of neighboring pixels
+        for exposureRef in self.dataRefs:
+            self._fill_exposure(
+                exposureRef.get(),
+                mask_pixel=True,
+                mask_bitname='CR',
+            )
+
+        # this warps all exposures onto a common image, so they must not
+        # overlap.  Our make_data creates the images from CCD bounding boxes
+
+        makeWarp = MakeShearWarpTask(config=config)
+        result = makeWarp.run(
+            self.dataRefs,
+            skyInfo=self.skyInfo,
+            visit_summary=None,
+        )
+
+        coadd_bbox, coadd_wcs = self.skyInfo.bbox, self.skyInfo.wcs
+        for exposureRef in self.dataRefs:
+            exp = exposureRef.get()
+
+            data_id = exposureRef.dataId
+            seed = MakeShearWarpTask.get_seed_from_data_id(data_id)
+
+            rng = np.random.RandomState(seed + config.seed_offset)
+            warped_exposures = warp_exposures(
+                exp,
+                coadd_wcs,
+                coadd_bbox,
+                remove_poisson=config.remove_poisson,
+                rng=rng,
+                bad_mask_planes=config.bad_mask_planes,
+                verify=False,
+            )
+
+            # these warps are same size as big image in result
+            warp, noise_warp, mfrac_warp, _ = warped_exposures
+
+            # get portion that was written into
+            msk = ~(np.isnan(warp.image.array))
+
+            np.testing.assert_array_equal(
+                warp.image.array[msk],
+                result.warp.image.array[msk],
+            )
+            np.testing.assert_array_equal(
+                warp.mask.array[msk],
+                result.warp.mask.array[msk],
+            )
+            np.testing.assert_array_equal(
+                warp.variance.array[msk],
+                result.warp.variance.array[msk],
+            )
+
+            np.testing.assert_array_equal(
+                noise_warp.image.array[msk],
+                result.noise0_warp.image.array[msk],
+            )
+            np.testing.assert_array_equal(
+                noise_warp.mask.array[msk],
+                result.noise0_warp.mask.array[msk],
+            )
+            np.testing.assert_array_equal(
+                noise_warp.variance.array[msk],
+                result.noise0_warp.variance.array[msk],
+            )
+
+            np.testing.assert_array_equal(
+                mfrac_warp.image.array[msk],
+                result.mfrac_warp.array[msk],
+            )
 
 
 def setup_module(module):
