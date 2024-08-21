@@ -359,11 +359,7 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         """
         from descwl_coadd import warp_exposures
 
-        seed = 1122
-
         config = MakeShearWarpConfig()
-
-        assert len(self.dataRefs) == 3
 
         # this masks a single pixel, which then propagates to mfrac
         # in a set of neighboring pixels
@@ -371,11 +367,11 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
             self._fill_exposure(
                 exposureRef.get(),
                 mask_pixel=True,
-                mask_bitname='CR',
+                mask_bitname="CR",
             )
 
         # this warps all exposures onto a common image, so they must not
-        # overlap.  Our make_data creates the images from CCD bounding boxes
+        # overlap.  Our _make_data creates the images from CCD bounding boxes
 
         makeWarp = MakeShearWarpTask(config=config)
         result = makeWarp.run(
