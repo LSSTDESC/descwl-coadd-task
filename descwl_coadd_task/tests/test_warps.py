@@ -25,10 +25,8 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         # Docstring inherited.
         # This method contains the setup that needs to be done only once for
         # all the tests.
-        # cls.ny = 4000
-        # cls.nx = 4072
-        cls.ny = 150
-        cls.nx = 100
+        cls.ny = 4000
+        cls.nx = 4072
 
         cls._build_skyMap()
         cls._generate_photoCalib()
