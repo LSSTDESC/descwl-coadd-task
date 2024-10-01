@@ -219,7 +219,7 @@ class AssembleShearCoaddTask(PipelineTask):
             skyMap, tractId=outputDataId["tract"], patchId=outputDataId["patch"]
         )
 
-        self.common = CommonComponents(
+        common = CommonComponents(
             units=CoaddUnits.nJy,
             wcs=inputData["skyInfo"].patchInfo.wcs,
             band=outputDataId.get("band", None),
@@ -231,11 +231,12 @@ class AssembleShearCoaddTask(PipelineTask):
             noise_warps=inputData["noise0_warps"],
             mfrac_warps=inputData["mfrac_warps"],
             skyInfo=inputData["skyInfo"],
+            common=common,
         )
         butlerQC.put(returnStruct, outputRefs)
         return returnStruct
 
-    def run(self, *, input_warps, mfrac_warps, noise_warps, skyInfo):
+    def run(self, *, input_warps, mfrac_warps, noise_warps, skyInfo, common, **kwargs):
         raise NotImplementedError("This method is not yet implemented.")
 
     @staticmethod
@@ -344,7 +345,7 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
     ConfigClass = AssembleShearCoaddSlowConfig
     _DefaultName = "assembleShearCoaddSlow"
 
-    def run(self, *, input_warps, noise_warps, mfrac_warps, skyInfo):
+    def run(self, *, input_warps, noise_warps, mfrac_warps, skyInfo, common, **kwargs):
         """Coadd a set of warped images, along with noise and masked fractions.
 
         Parameters
@@ -357,6 +358,8 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
             List of data references of masked fraction images.
         skyInfo : `~lsst.pipe.base.Struct`
             A Struct object
+        common : `~lsst.cell_coadds.CommonComponents`
+            A container for common components such as units, wcs, and band etc.
 
         Returns
         -------
@@ -473,10 +476,10 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
 
             identifiers = CellIdentifiers(
                 cell=cellInfo.index,
-                skymap=self.common.identifiers.skymap,
-                tract=self.common.identifiers.tract,
-                patch=self.common.identifiers.patch,
-                band=self.common.identifiers.band,
+                skymap=common.identifiers.skymap,
+                tract=common.identifiers.tract,
+                patch=common.identifiers.patch,
+                band=common.identifiers.band,
             )
 
             scc = SingleCellCoadd(
@@ -484,7 +487,7 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
                 psf=coadd_data["coadd_psf_exp"].image,
                 inner_bbox=cellInfo.inner_bbox,
                 inputs=None,
-                common=self.common,
+                common=common,
                 identifiers=identifiers,
             )
 
@@ -497,7 +500,7 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
             grid=grid,
             outer_cell_size=cellInfo.outer_bbox.getDimensions(),
             inner_bbox=None,
-            common=self.common,
+            common=common,
             psf_image_size=cells[0].psf_image.getDimensions(),
         )
 
