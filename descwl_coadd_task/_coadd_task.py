@@ -492,7 +492,6 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
             )
 
             cells.append(scc)
-            break
 
         grid = self._construct_grid(skyInfo)
         mcc = MultipleCellCoadd(
