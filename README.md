@@ -1,6 +1,9 @@
 # descwl-coadd-task
 Task to run coaddition in cells
 
+[![tests](https://github.com/LSSTDESC/descwl-coadd-task/actions/workflows/tests.yaml/badge.svg)](https://github.com/LSSTDESC/descwl-coadd-task/actions/workflows/tests.yaml)
+[![codecov](https://codecov.io/gh/LSSTDESC/descwl-coadd-task/graph/badge.svg?token=njZYWcF4pm)](https://codecov.io/gh/LSSTDESC/descwl-coadd-task)
+
 ## Setting up the environment at USDF (for Gen3 butler)
 
 Load a custom conda environment that has the Rubin Science Pipelines and other relevant packages installed.
