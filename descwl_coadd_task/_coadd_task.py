@@ -17,6 +17,7 @@ from descwl_coadd import (
     make_coadd,
     make_stacker,
 )
+from descwl_coadd.defaults import BOUNDARY_BIT_NAME
 from lsst.cell_coadds import (
     CellIdentifiers,
     CoaddUnits,
@@ -370,7 +371,7 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
 
         # gc = self._construct_grid_container(skyInfo, statsCtrl)
         # coadd_inputs_gc = GridContainer(gc.shape)
-        edge = afwImage.Mask.getPlaneBitMask(["EDGE", "NO_DATA"])
+        edge = afwImage.Mask.getPlaneBitMask([BOUNDARY_BIT_NAME, "NO_DATA"])
 
         cells: list[SingleCellCoadd] = []
         for cellInfo in skyInfo.patchInfo:
@@ -395,7 +396,7 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
                 # Coadd the warp onto the cells it completely overlaps.
                 if (mi.getMask().array & edge).any():
                     self.log.debug(
-                        "Skipping %s in cell %s because it has an EDGE",
+                        "Skipping %s in cell %s because it has an edge",
                         warpRef.dataId,
                         cellInfo.index,
                     )
