@@ -8,14 +8,36 @@ import lsst.skymap as skyMap
 import lsst.utils.tests
 import numpy as np
 from lsst.afw.detection import GaussianPsf
-from lsst.daf.butler import DataCoordinate, DimensionUniverse
 from lsst.pipe.base import InMemoryDatasetHandle
 from lsst.pipe.tasks.coaddBase import makeSkyInfo
 
 from descwl_coadd_task import MakeShearWarpConfig, MakeShearWarpTask
+from descwl_coadd_task.utils_for_tests import (
+    construct_geometry,
+    fill_exposure,
+    generate_data_id,
+    generate_photoCalib,
+)
 
 PIXEL_SCALE = 0.2
 """Pixel scale in arcseconds"""
+
+
+# Use a local skyMap builder to get a DiscreteSkyMap.
+def _build_skyMap():
+    """Build a simple skyMap."""
+    crval = lsst.geom.SpherePoint(
+        56.65 * lsst.geom.degrees,
+        -36.45 * lsst.geom.degrees,
+    )
+
+    simpleMapConfig = skyMap.discreteSkyMap.DiscreteSkyMapConfig()
+    simpleMapConfig.raList = [crval.getRa().asDegrees()]
+    simpleMapConfig.decList = [crval.getDec().asDegrees()]
+    simpleMapConfig.radiusList = [0.1]
+    simpleMapConfig.pixelScale = PIXEL_SCALE
+
+    return skyMap.DiscreteSkyMap(simpleMapConfig)
 
 
 class MakeWarpTestCase(lsst.utils.tests.TestCase):
@@ -28,12 +50,12 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         cls.ny = 4000
         cls.nx = 4072
 
-        cls._build_skyMap()
-        cls._generate_photoCalib()
+        cls.skyMap = _build_skyMap()
+        cls.photoCalib = generate_photoCalib()
         cls.skyInfo = makeSkyInfo(cls.skyMap, 0, 36)
 
         # Setup the metadata and empty exposures for warping.
-        cls._make_data()
+        cls.dataRefs = construct_geometry(visit_id=1248)
 
     def setUp(self):
         # Docstring inherited.
@@ -45,139 +67,13 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         # This needs to be redone for each test, since the test may have
         # modified the pixel values in-place.
         for exposureRef in self.dataRefs:
-            self._fill_exposure(exposureRef.get())
+            fill_exposure(exposureRef.get(), rng=self.rng)
 
     def tearDown(self):
         # Docstring inherited.
         # This method cleans up the mask planes before the next test.
         for exposureRef in self.dataRefs:
             exposureRef.get().mask.clearAllMaskPlanes()
-
-    @classmethod
-    def _build_skyMap(cls):
-        """Build a simple skyMap."""
-        crval = lsst.geom.SpherePoint(
-            56.65 * lsst.geom.degrees,
-            -36.45 * lsst.geom.degrees,
-        )
-
-        simpleMapConfig = skyMap.discreteSkyMap.DiscreteSkyMapConfig()
-        simpleMapConfig.raList = [crval.getRa().asDegrees()]
-        simpleMapConfig.decList = [crval.getDec().asDegrees()]
-        simpleMapConfig.radiusList = [0.1]
-        simpleMapConfig.pixelScale = PIXEL_SCALE
-
-        cls.skyMap = skyMap.DiscreteSkyMap(simpleMapConfig)
-
-    @classmethod
-    def _generate_photoCalib(cls):
-        """Generate a PhotoCalib instance."""
-        cls.meanCalibration = 1e-4
-        cls.calibrationErr = 1e-5
-
-        cls.photoCalib = afw_image.PhotoCalib(
-            cls.meanCalibration,
-            cls.calibrationErr,
-        )
-
-    @classmethod
-    def _generate_data_id(
-        cls,
-        *,
-        tract: int = 9813,
-        patch: int = 42,
-        band: str = "fake",
-        detector_id: int = 9,
-        visit_id: int = 1234,
-        detector_max: int = 189,
-        visit_max: int = 10000,
-    ) -> DataCoordinate:
-        """Generate a DataCoordinate instance to use as data_id.
-
-        Parameters
-        ----------
-        tract : `int`, optional
-            Tract ID for the data_id
-        patch : `int`, optional
-            Patch ID for the data_id
-        band : `str`, optional
-            Band for the data_id
-        detector_id : `int`, optional
-            Detector ID for the data_id
-        visit_id : `int`, optional
-            Visit ID for the data_id
-        detector_max : `int`, optional
-            Maximum detector ID for the data_id
-        visit_max : `int`, optional
-            Maximum visit ID for the data_id
-
-        Returns
-        -------
-        data_id : `lsst.daf.butler.DataCoordinate`
-            An expanded data_id instance.
-        """
-        universe = DimensionUniverse()
-
-        instrument = universe["instrument"]
-        instrument_record = instrument.RecordClass(
-            name="DummyCam",
-            class_name="lsst.obs.base.instrument_tests.DummyCam",
-            detector_max=detector_max,
-            visit_max=visit_max,
-        )
-
-        skymap = universe["skymap"]
-        skymap_record = skymap.RecordClass(name="test_skymap")
-
-        band_element = universe["band"]
-        band_record = band_element.RecordClass(name=band)
-
-        visit = universe["visit"]
-        visit_record = visit.RecordClass(id=visit_id, instrument="test")
-
-        detector = universe["detector"]
-        detector_record = detector.RecordClass(id=detector_id, instrument="test")
-
-        physical_filter = universe["physical_filter"]
-        physical_filter_record = physical_filter.RecordClass(
-            name=band, instrument="test", band=band
-        )
-
-        patch_element = universe["patch"]
-        patch_record = patch_element.RecordClass(
-            skymap="test_skymap",
-            tract=tract,
-            patch=patch,
-        )
-
-        if "day_obs" in universe:
-            day_obs_element = universe["day_obs"]
-            day_obs_record = day_obs_element.RecordClass(id=20240201, instrument="test")
-        else:
-            day_obs_record = None
-
-        # A dictionary with all the relevant records.
-        record = {
-            "instrument": instrument_record,
-            "visit": visit_record,
-            "detector": detector_record,
-            "patch": patch_record,
-            "tract": 9813,
-            "band": band_record.name,
-            "skymap": skymap_record.name,
-            "physical_filter": physical_filter_record,
-        }
-
-        if day_obs_record:
-            record["day_obs"] = day_obs_record
-
-        # A dictionary with all the relevant recordIds.
-        record_id = record.copy()
-        for key in ("visit", "detector"):
-            record_id[key] = record_id[key].id
-
-        data_id = DataCoordinate.standardize(record_id, universe=universe)
-        return data_id.expanded(record)
 
     @classmethod
     def _make_data(cls):
@@ -231,43 +127,10 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
             exposure.setDetector(detector)
 
             dataId_dict = {"detector_id": detectorNum, "visit_id": 1248, "band": "fake"}
-            dataId = cls._generate_data_id(**dataId_dict)
+            dataId = generate_data_id(**dataId_dict)
             dataRef = InMemoryDatasetHandle(exposure, dataId=dataId)
 
             cls.dataRefs.append(dataRef)
-
-    def _fill_exposure(self, exposure, mask_pixel=False, mask_bitname="SAT"):
-        """Fill an exposure with random data.
-
-        Parameters
-        ----------
-        mask_pixel : `bool`, optional
-            If True, a pixel will be masked in the exposure.
-        mask_bitname : `str`, optional
-            Name of the mask bit to set.
-
-        Returns
-        -------
-        exposure : `lsst.afw.image.ExposureF`
-            The modified exposure.
-
-        Notes
-        -----
-        The input ``exposure`` is modified in-place.
-        """
-        exposure.maskedImage.image.array = (
-            self.rng.uniform(size=(self.ny, self.nx)).astype(np.float32) * 1000
-        )
-        exposure.maskedImage.variance.array = self.rng.uniform(
-            low=0.98, high=1.0, size=(self.ny, self.nx)
-        ).astype(np.float32)
-
-        if mask_pixel:
-            exposure.maskedImage.mask[5, 5] = afw_image.Mask.getPlaneBitMask(
-                mask_bitname
-            )
-
-        return exposure
 
     def test_makeWarpSmoke(self):
         """Test basic MakeDirectWarpTask and check that the ."""
@@ -325,8 +188,9 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         # this masks a single pixel, which then propagates to mfrac
         # in a set of neighboring pixels
         for exposureRef in self.dataRefs:
-            self._fill_exposure(
+            fill_exposure(
                 exposureRef.get(),
+                rng=self.rng,
                 mask_pixel=True,
                 mask_bitname=mask_bitname,
             )
@@ -362,8 +226,9 @@ class MakeWarpTestCase(lsst.utils.tests.TestCase):
         # this masks a single pixel, which then propagates to mfrac
         # in a set of neighboring pixels
         for exposureRef in self.dataRefs:
-            self._fill_exposure(
+            fill_exposure(
                 exposureRef.get(),
+                rng=self.rng,
                 mask_pixel=True,
                 mask_bitname="CR",
             )
