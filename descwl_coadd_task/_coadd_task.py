@@ -370,7 +370,7 @@ class AssembleShearCoaddSlowTask(AssembleShearCoaddTask):
 
         # gc = self._construct_grid_container(skyInfo, statsCtrl)
         # coadd_inputs_gc = GridContainer(gc.shape)
-        edge = afwImage.Mask.getPlaneBitMask("EDGE")
+        edge = afwImage.Mask.getPlaneBitMask(["EDGE", "NO_DATA"])
 
         cells: list[SingleCellCoadd] = []
         for cellInfo in skyInfo.patchInfo:
