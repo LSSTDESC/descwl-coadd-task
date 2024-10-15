@@ -4,10 +4,8 @@ import unittest
 from typing import TYPE_CHECKING, Iterable
 
 import lsst.afw.cameraGeom.testUtils
-import lsst.afw.image as afw_image
 import lsst.utils.tests
 import numpy as np
-from lsst.afw.detection import GaussianPsf
 from lsst.cell_coadds import (
     CoaddUnits,
     CommonComponents,
@@ -26,7 +24,6 @@ from descwl_coadd_task.utils_for_tests import (
     build_skyMap,
     construct_geometry,
     fill_exposure,
-    generate_data_id,
     generate_photoCalib,
 )
 
@@ -103,170 +100,6 @@ class AssembleCoaddTestCase(lsst.utils.tests.TestCase):
         for _, exposureRefs in self.dataRefsDict.items():
             for exposureRef in exposureRefs:
                 exposureRef.get().mask.clearAllMaskPlanes()
-
-    @classmethod
-    def _constdfgdfgruct_geometry(cls, visit_id: int):
-        """Generate the necessary dataRefs to run the MakeWarpTask.
-
-        This is primarily setting up the geometry of the input exposures,
-        along with some metadata.
-        """
-
-        match visit_id:
-
-            case 204706:
-                crpixList = [
-                    lsst.geom.Point2D(1990.63, 2018.46),
-                    lsst.geom.Point2D(2186.46, 2044.82),
-                ]
-                crvalList = [
-                    lsst.geom.SpherePoint(
-                        57.14 * lsst.geom.degrees, -36.51 * lsst.geom.degrees
-                    ),
-                    lsst.geom.SpherePoint(
-                        57.39 * lsst.geom.degrees, -36.63 * lsst.geom.degrees
-                    ),
-                ]
-                cdMatrix = lsst.afw.geom.makeCdMatrix(
-                    scale=PIXEL_SCALE * lsst.geom.arcseconds,
-                    orientation=122.9 * lsst.geom.degrees,
-                )
-                detectorNums = [158, 161]
-
-            case 204708:
-                crpixList = [
-                    lsst.geom.Point2D(2111.48, 1816.14),
-                    lsst.geom.Point2D(1971.88, 1899.54),
-                    lsst.geom.Point2D(1863.09, 1939.27),
-                ]
-                crvalList = [
-                    lsst.geom.SpherePoint(
-                        57.28 * lsst.geom.degrees, -36.66 * lsst.geom.degrees
-                    ),
-                    lsst.geom.SpherePoint(
-                        57.19 * lsst.geom.degrees, -36.35 * lsst.geom.degrees
-                    ),
-                    lsst.geom.SpherePoint(
-                        57.43 * lsst.geom.degrees, -36.48 * lsst.geom.degrees
-                    ),
-                ]
-                cdMatrix = lsst.afw.geom.makeCdMatrix(
-                    scale=PIXEL_SCALE * lsst.geom.arcseconds,
-                    orientation=121.52 * lsst.geom.degrees,
-                )
-                detectorNums = [32, 36, 39]
-
-            case 174534:
-                crpixList = [
-                    lsst.geom.Point2D(1929.4499812439476, 2147.1179041443015),
-                    lsst.geom.Point2D(2012.9460541750886, 2073.7299107964782),
-                    lsst.geom.Point2D(2259.5002281485358, 2105.9109483821226),
-                ]
-                crvalList = [
-                    lsst.geom.SpherePoint(
-                        55.94990987622795 * lsst.geom.degrees,
-                        -36.18810977436167 * lsst.geom.degrees,
-                    ),
-                    lsst.geom.SpherePoint(
-                        56.02684930702103 * lsst.geom.degrees,
-                        -35.96612774405456 * lsst.geom.degrees,
-                    ),
-                    lsst.geom.SpherePoint(
-                        55.733500259251784 * lsst.geom.degrees,
-                        -35.89282833381862 * lsst.geom.degrees,
-                    ),
-                ]
-                cdMatrix = lsst.afw.geom.makeCdMatrix(
-                    scale=PIXEL_SCALE * lsst.geom.arcseconds,
-                    orientation=16.69 * lsst.geom.degrees,
-                )
-                detectorNums = [12, 15, 16]
-
-            case 397330:
-
-                crpixList = [
-                    lsst.geom.Point2D(2038.0123728146252, 1886.2009723798765),
-                    lsst.geom.Point2D(2165.4630755512139, 1991.9349231803017),
-                ]
-                crvalList = [
-                    lsst.geom.SpherePoint(
-                        56.05982507585136 * lsst.geom.degrees,
-                        -36.04171236047266 * lsst.geom.degrees,
-                    ),
-                    lsst.geom.SpherePoint(
-                        56.01232760335289 * lsst.geom.degrees,
-                        -35.80314141320685 * lsst.geom.degrees,
-                    ),
-                ]
-                cdMatrix = lsst.afw.geom.makeCdMatrix(
-                    scale=PIXEL_SCALE * lsst.geom.arcseconds,
-                    orientation=352.56 * lsst.geom.degrees,
-                )
-
-                detectorNums = [78, 117]
-
-            case 1248:
-                crpixList = [
-                    lsst.geom.Point2D(2047.84, 1909.10),
-                    lsst.geom.Point2D(2110.05, 1982.96),
-                    lsst.geom.Point2D(2104.22, 1780.364),
-                ]
-                crvalList = [
-                    lsst.geom.SpherePoint(
-                        56.16 * lsst.geom.degrees, -36.84 * lsst.geom.degrees
-                    ),
-                    lsst.geom.SpherePoint(
-                        56.33 * lsst.geom.degrees, -36.64 * lsst.geom.degrees
-                    ),
-                    lsst.geom.SpherePoint(
-                        56.40 * lsst.geom.degrees, -36.96 * lsst.geom.degrees
-                    ),
-                ]
-                cdMatrix = lsst.afw.geom.makeCdMatrix(
-                    scale=PIXEL_SCALE * lsst.geom.arcseconds,
-                    orientation=123.5 * lsst.geom.degrees,
-                )
-
-                detectorNums = [107, 114, 146]
-
-            case _:
-                raise ValueError(
-                    f"{visit_id} is not supported. It must be one of "
-                    "[1248, 204706, 397330]"
-                )
-
-        dataRefs = []
-
-        for detId, detectorNum in enumerate(detectorNums):
-            wcs = lsst.afw.geom.makeSkyWcs(crpixList[detId], crvalList[detId], cdMatrix)
-            exposure = afw_image.ExposureF(cls.nx, cls.ny)
-
-            # Set the PhotoCalib, Wcs and detector objects of this exposure.
-            exposure.setPhotoCalib(cls.photoCalib)
-            exposure.setPsf(GaussianPsf(25, 25, 2.5))
-            exposure.setFilter(
-                afw_image.FilterLabel(physical="fakeFilter", band="fake")
-            )
-            exposure.setWcs(wcs)
-
-            detectorName = f"detector {detectorNum}"
-            detector = lsst.afw.cameraGeom.testUtils.DetectorWrapper(
-                name=detectorName,
-                id=detectorNum,
-            ).detector
-            exposure.setDetector(detector)
-
-            dataId_dict = {
-                "detector_id": detectorNum,
-                "visit_id": visit_id,
-                "band": "fake",
-            }
-            dataId = generate_data_id(**dataId_dict)
-            dataRef = InMemoryDatasetHandle(exposure, dataId=dataId)
-
-            dataRefs.append(dataRef)
-
-        return dataRefs
 
     def checkSortOrder(self, inputs: Iterable[ObservationIdentifiers]) -> None:
         """Check that the inputs are sorted.
