@@ -380,6 +380,7 @@ class MakeShearWarpTask(PipelineTask):
         # The warped PSF is not suitable for WL shear measurement.
         # We nevertheless attach it here and recompute the PSF for shear
         # during coaddition.
+        self.log.info("total_good_pixels = %d", total_good_pixels)
         inputRecorder.finish(final_warp, total_good_pixels)
         final_psf = CoaddPsf(inputRecorder.coaddInputs.ccds, coadd_wcs)
         final_warp.setPsf(final_psf)
